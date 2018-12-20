@@ -4,57 +4,61 @@ import preprocData as pp
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split, GroupShuffleSplit, cross_val_score
+from sklearn.model_selection import train_test_split, GroupShuffleSplit, cross_val_score, StratifiedKFold
 from sklearn.metrics import mean_absolute_error
-from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 
-from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.pipeline import Pipeline
 
-import bayes_opt
-
-
-## transformation données
-#transformer = Pipeline([
-#    ('features', FeatureUnion(n_jobs=1, transformer_list=[
-#        # Part 1
-#        ('numericals', Pipeline([
-#            ('selector', TypeSelector('number')),
-#            ('traite', PreTraitementContinues())
-#            ])
-#        ), # numériques
-#        # Part 2
-#        ('categoricals', Pipeline([
-#            ('selector', TypeSelector('object')),
-#            ('traite', PreTraiteQualitatives()),
-#            ('labeler', ModalitiesEncoder()),
-#            ])
-#        ) # catégorielles close
-#        ])
-#    ), # features close
-#    ]) # pipeline close
+class SplitEvents():
+    def __init__(self, condiSplit):
+        self.condiSplit = condiSplit
+    
+    def fit(self, Xi, y=None):
+        return self
+    
+    def transform(self, Xi):
+        X = Xi.copy()
+        X_t = X[self.condiSplit]
+        X_f = X[~self.condiSplit]
+        return X_t, X_f
 
 ## recupère données
-df = ReadFiles.GetInputData()
-wtPower = ReadFiles.GetOutputData()
+df = ReadFiles.GetInputTrainData()
+wtPower = ReadFiles.GetOutputTrainData()
 
-df = df.assign(Turbulence = np.log10((df.Rotor_speed_std/(df.Rotor_speed+df.Rotor_speed.min()+0.1)+0.1)))
-df = df.assign(Rotor_speed3 = df['Rotor_speed']**3)
+## ajout de variables
+addFeat = pp.AddFeatures()
+addFeat.fit(df)
+df = addFeat.transform(df)
 
 ## séparation des individus suivant rotor_speed => non linéarité entre rotor_speed et target
-condi = df.Rotor_speed>=15**3 # Rotor_speed>=15
-dfinf = df.loc[~condi, :]
-dfsup = df.loc[condi, :]
-
-wtPowerinf = wtPower[~condi]
-wtPowersup = wtPower[condi]
+condi = df.Rotor_speed3>=15**3 # Rotor_speed>=15
+splitDataset = SplitEvents(condiSplit=condi)
+dfsup, dfinf = splitDataset.transform(df)
+wtPowersup, wtPowerinf = splitDataset.transform(wtPower)
 
 ###########
 ## nettoyage des données
-medianDic = dfinf.median().to_dict()
-dfinf = dfinf.fillna(medianDic)
-medianDic = dfsup.median().to_dict()
-dfsup = dfsup.fillna(medianDic)
+impMedian = pp.ImputeMedian()
+impMedian.fit(dfinf)
+dfinf = impMedian.transform(dfinf)
+
+impMedian = pp.ImputeMedian()
+impMedian.fit(dfsup)
+dfsup = impMedian.transform(dfsup)
+
+
+### validation croisée
+lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
+                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
+model = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1)
+pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
+                 ('model', model)])
+
+kf = KFold(5)
+scores = cross_val_score(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolute_error')
+
 
 
 ###########
@@ -70,7 +74,7 @@ lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angl
 lstKeepCols = ['Pitch_angle', 'Rotor_speed3', \
                'Gearbox_bearing_1_temperature', 'Generator_stator_temperature_std', \
                'Turbulence']
-model = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1) #LinearRegression()
+model = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
 
@@ -105,6 +109,20 @@ print(f'MAE train = {maeTrI}\nMAE test = {maeTeI}')
 
 ## voir pour ajouter info int/float dans dictionnaire passé à bayesOptim
 
+##### validation croisée pour rotor_speed >15
+allCols = dfsup.columns
+lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
+notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
+           'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
+           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
+cleanCols = allCols[lstCols].difference(notKeep).tolist()
+pipeSup = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
+                    ('model', RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1))])
+
+kf = KFold(5)
+scores = cross_val_score(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error')
+
+
 ###########
 ## modèle sur rotor_speed>=15
 xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, stratify=dfsup['MAC_CODE'], random_state=123)
@@ -132,6 +150,7 @@ print(f'MAE train = {maeTrS}\nMAE test = {maeTeS}')
 ## importance des variables
 #gp.plotImportance(xtrain[lstKeepCols], fitted)
 
+##############
 ## prédiction finale
 predTr = pd.concat((predTrI, predTrS),axis=0).sort_index()
 predTe = pd.concat((predTeI, predTeS),axis=0).sort_index()
@@ -147,4 +166,5 @@ print(f'MAE train = {maeTr}\nMAE test = {maeTe}')
 
 gp.getAllResidPlot(ytrain, predTr, ytest, predTe)
 
-## mae = 16 train ; 18 test
+## mae = 16 train ; 17 test
+## mape = 1.2 train ; 0.90 test

@@ -35,8 +35,8 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 #    ]) # pipeline close
 
 ## recupère données
-df = ReadFiles.GetInputData()
-wtPower = ReadFiles.GetOutputData()
+df = ReadFiles.GetInputTrainData()
+wtPower = ReadFiles.GetOutputTrainData()
 
 ## séparation des individus suivant rotor_speed => non linéarité entre rotor_speed et target
 condi = df.Rotor_speed>=15

@@ -35,8 +35,8 @@ import matplotlib.pyplot as plt
 #    ]) # pipeline close
 
 ## recupère données
-df = ReadFiles.GetInputData()
-wtPower = ReadFiles.GetOutputData()
+df = ReadFiles.GetInputTrainData()
+wtPower = ReadFiles.GetOutputTrainData()
 
 #df = df.assign(PitchAng_re = df.Pitch_angle+ np.abs(df.Pitch_angle.min())*df.MAC_CODE.str[-1].astype('int'))
 
