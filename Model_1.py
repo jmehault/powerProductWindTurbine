@@ -1,15 +1,9 @@
 import ReadFiles
 import GetPerformances as gp
 import preprocData as pp
-
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.ensemble import RandomForestRegressor
-
-from statsmodels.discrete.discrete_model import Logit
-
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline, FeatureUnion
 
 import matplotlib.pyplot as plt
@@ -35,10 +29,10 @@ import matplotlib.pyplot as plt
 #    ]) # pipeline close
 
 ## recupère données
-df = ReadFiles.GetInputData()
-wtPower = ReadFiles.GetOutputData()
+df = ReadFiles.GetInputTrainData()
+wtPower = ReadFiles.GetOutputTrainData()
 
-#df = df.assign(PitchAng_re = df.Pitch_angle+ np.abs(df.Pitch_angle.min())*df.MAC_CODE.str[-1].astype('int'))
+# df = df.assign(PitchAng_re = df.Pitch_angle+ np.abs(df.Pitch_angle.min())*df.MAC_CODE.str[-1].astype('int'))
 
 df = df.join(pd.get_dummies(df.MAC_CODE))
 
@@ -57,8 +51,8 @@ pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
 fitted = pipe.fit(xtrain, ytrain)
 
 
-#model = OLS(ytrain, xtrain[lstKeepCols]) # MAE ~ 64
-#fitted = model.fit()
+# model = OLS(ytrain, xtrain[lstKeepCols]) # MAE ~ 64
+# fitted = model.fit()
 
 ## importance des variables
 gp.plotImportance(xtrain[lstKeepCols], fitted)
