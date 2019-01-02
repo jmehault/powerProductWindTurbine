@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split, GroupShuffleSplit, cross_val_score, StratifiedKFold
 from sklearn.metrics import mean_absolute_error
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor
 
 from sklearn.pipeline import Pipeline
 
@@ -54,7 +54,8 @@ dfsup = impMedian.transform(dfsup)
 ### validation croisée
 lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
                 'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
-model = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1)
+model = GradientBoostingRegressor(n_estimators=500, max_depth=3)
+#model = xgb.XGBRegressor(n_estimators=100, max_depth=3, n_jobs=-1)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
 
@@ -76,7 +77,7 @@ lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angl
 lstKeepCols = ['Pitch_angle', 'Rotor_speed3', \
                'Gearbox_bearing_1_temperature', 'Generator_stator_temperature_std', \
                'Turbulence']
-model = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1)
+model = GradientBoostingRegressor(n_estimators=500, max_depth=3)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
 
@@ -118,8 +119,9 @@ notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direct
            'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
            'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
 cleanCols = allCols[lstCols].difference(notKeep).tolist()
+modelsup = GradientBoostingRegressor(n_estimators=500, max_depth=3)
 pipeSup = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
-                    ('model', RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1))])
+                    ('model', modelsup)])
 
 kf = KFold(5)
 scores = cross_val_score(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error')
@@ -137,8 +139,9 @@ notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direct
 cleanCols = allCols[lstCols].difference(notKeep).tolist()
 
 
+modelsup = GradientBoostingRegressor(n_estimators=500, max_depth=3)
 pipeSup = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
-                    ('model', RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1))])
+                    ('model', modelsup)])
 
 fittedSup = pipeSup.fit(xtrainS, ytrainS)
 
