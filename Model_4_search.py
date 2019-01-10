@@ -11,6 +11,7 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, A
 from sklearn.pipeline import Pipeline
 
 import xgboost as xgb
+from bayes_opt import BayesianOptimization
 
 class SplitEvents():
     def __init__(self, condiSplit):
@@ -63,9 +64,14 @@ pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
 kf = KFold(5)
 scores = cross_val_score(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolute_error')
 
-## optimisation des paramètres par méthode bayesienne
-from bayes_opt import BayesianOptimization
 
+###########
+## modèle sur rotor_speed<15
+xtrainI, xtestI, ytrainI, ytestI = train_test_split(dfinf, wtPowerinf, test_size=0.2, stratify=dfinf['MAC_CODE'], random_state=123)
+
+lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+
+## optimisation des paramètres par méthode bayesienne
 # function to be maximized - must find (x=0;y=10)
 def targetFunction(lstKeepCols=lstKeepCols, n_estimators=100, max_depth=3,
                    colsample_bytree=1, subsample=1):
@@ -73,7 +79,7 @@ def targetFunction(lstKeepCols=lstKeepCols, n_estimators=100, max_depth=3,
                              colsample_bytree=colsample_bytree, subsample=subsample, n_jobs=-1)
     pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                      ('model', model)])
-    score = cross_val_score(pipe, xtrainI, ytrainI, cv=3, scoring='neg_mean_absolute_error', n_jobs=-1)
+    score = cross_val_score(pipe, xtrainI, ytrainI, cv=2, scoring='neg_mean_absolute_error', n_jobs=-1)
     return score.mean()
 
 # define parameters bounds
@@ -89,13 +95,6 @@ bo.probe({'n_estimators':100, 'max_depth':9, 'colsample_bytree':1, 'subsample':1
 bo.maximize(init_points=5, n_iter=5)
 
 
-
-
-
-###########
-## modèle sur rotor_speed<15
-xtrainI, xtestI, ytrainI, ytestI = train_test_split(dfinf, wtPowerinf, test_size=0.2, stratify=dfinf['MAC_CODE'], random_state=123)
-
 ## modèle
 # sélectionner toutes les colonnes sans valeur manquante : quelles informations importantes ?
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
@@ -105,7 +104,9 @@ lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_t
 #lstKeepCols = ['Pitch_angle', 'Rotor_speed3', \
 #               'Gearbox_bearing_1_temperature', 'Generator_stator_temperature_std', \
 #               'Turbulence']
-model = xgb.XGBRegressor(colsample_bytree=0.75, n_estimators=500, max_depth=3, n_jobs=-1)
+#model = xgb.XGBRegressor(colsample_bytree=1, subsample=1, n_estimators=680, max_depth=9, n_jobs=-1)
+model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
+                         colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
 
@@ -147,8 +148,9 @@ notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direct
            'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
            'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
 cleanCols = allCols[lstCols].difference(notKeep).tolist()
-modelsup = xgb.XGBRegressor(n_estimators=100, max_depth=9, n_jobs=-1)
-pipeSup = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
+modelsup = xgb.XGBRegressor(earning_rate=0.1, n_estimators=1500, max_depth=4,
+                            colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
+pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelsup)])
 
 kf = KFold(5)
@@ -159,15 +161,16 @@ scores = cross_val_score(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_ab
 ## modèle sur rotor_speed>=15
 xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, stratify=dfsup['MAC_CODE'], random_state=123)
 
-allCols = dfsup.columns
-lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
-notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
-           'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
-           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
-cleanCols = allCols[lstCols].difference(notKeep).tolist()
+#allCols = dfsup.columns
+#lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
+#notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
+#           'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
+#           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
+#cleanCols = allCols[lstCols].difference(notKeep).tolist()
 
-modelsup = xgb.XGBRegressor(colsample_bytree=0.75, subsample=0.9, n_estimators=500, max_depth=6, n_jobs=-1)
-pipeSup = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
+modelsup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
+                            colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
+pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelsup)])
 
 fittedSup = pipeSup.fit(xtrainS, ytrainS)
