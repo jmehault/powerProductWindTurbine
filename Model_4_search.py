@@ -4,7 +4,7 @@ import preprocData as pp
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.model_selection import train_test_split, KFold, cross_val_score, cross_validate
 from sklearn.metrics import mean_absolute_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor
 
@@ -54,20 +54,31 @@ dfsup = impMedian.transform(dfsup)
 
 ### validation croisée
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+
+allCols = dfinf.columns
+#lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
+notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+           "Absolute_wind_direction_c"]
+lstKeepCols = allCols.difference(notKeep).tolist()
+
 #lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
 #                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
 #model = GradientBoostingRegressor(n_estimators=500, max_depth=3)
-model = xgb.XGBRegressor(colsample_bytree=0.75, n_estimators=500, max_depth=3, n_jobs=-1)
+model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=3,
+                         colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
 
 kf = KFold(5)
 scores = cross_val_score(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolute_error')
 
+scores = cross_validate(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolute_error',
+                        return_train_score=True, n_jobs=-1)
 
 ###########
 ## modèle sur rotor_speed<15
-xtrainI, xtestI, ytrainI, ytestI = train_test_split(dfinf, wtPowerinf, test_size=0.2, stratify=dfinf['MAC_CODE'], random_state=123)
+xtrainI, xtestI, ytrainI, ytestI = train_test_split(dfinf, wtPowerinf, test_size=0.2, random_state=345)
 
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
 
@@ -143,12 +154,12 @@ print(f'MAE train = {maeTrI}\nMAE test = {maeTeI}')
 
 ##### validation croisée pour rotor_speed >15
 allCols = dfsup.columns
-lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
-notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
-           'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
-           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
-cleanCols = allCols[lstCols].difference(notKeep).tolist()
-modelsup = xgb.XGBRegressor(earning_rate=0.1, n_estimators=1500, max_depth=4,
+#lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
+notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+           "Absolute_wind_direction_c"]
+lstKeepCols = allCols.difference(notKeep).tolist()
+modelsup = xgb.XGBRegressor(earning_rate=0.1, n_estimators=1500, max_depth=3,
                             colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
 pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelsup)])
@@ -156,10 +167,12 @@ pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
 kf = KFold(5)
 scores = cross_val_score(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error')
 
+scores = cross_validate(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error', return_train_score=True, n_jobs=-1)
+
 
 ###########
 ## modèle sur rotor_speed>=15
-xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, stratify=dfsup['MAC_CODE'], random_state=123)
+xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, random_state=3456)
 
 #allCols = dfsup.columns
 #lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
@@ -168,7 +181,7 @@ xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size
 #           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
 #cleanCols = allCols[lstCols].difference(notKeep).tolist()
 
-modelsup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
+modelsup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=3,
                             colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
 pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelsup)])

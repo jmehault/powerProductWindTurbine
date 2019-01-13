@@ -3,7 +3,7 @@ import preprocData as pp
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
+import xgboost as xgb
 
 class SplitEvents():
     def __init__(self, condiSplit):
@@ -58,9 +58,11 @@ testDatasup = impMedian.transform(testDatasup)
 
 
 ## modèle basses vitesses
-lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
-                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
-modelInf = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1)
+# sélectionner toutes les colonnes sans valeur manquante
+lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+
+modelInf = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
+                         colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
 pipeInf = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', modelInf)])
 
@@ -69,17 +71,12 @@ fittedInf = pipeInf.fit(dfinf, wtPowerinf)
 testDatainf_pred = pd.Series(fittedInf.predict(testDatainf), index=testDatainf.index, name='TARGET')
 
 
-###########
 ## modèle hautes vitesses
-allCols = dfsup.columns
-lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
-notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
-           'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
-           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
-cleanCols = allCols[lstCols].difference(notKeep).tolist()
+lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
 
-modelSup = RandomForestRegressor(n_estimators=100, max_depth=12, n_jobs=-1)
-pipeSup = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
+modelSup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
+                            colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
+pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelSup)])
 
 fittedSup = pipeSup.fit(dfsup, wtPowersup)
@@ -96,5 +93,5 @@ pred = pd.concat((testDatainf_pred, testDatasup_pred),axis=0).sort_index()
 ##############
 ## ecriture des prédictions pour soumission
 dirOutput = '../Data'
-outFilename = 'output_testing_model3.csv'
+outFilename = 'output_testing_model4.csv'
 pred.to_csv(os.path.join(dirOutput,outFilename), sep=';', header=True)
