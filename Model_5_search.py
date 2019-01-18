@@ -120,5 +120,9 @@ print(f'MAE train = {maeTr}\nMAE test = {maeTe}')
 
 gp.getAllResidPlot(ytrain, predTr, ytest, predTe)
 
+varImp = fitted.named_steps['model'].feature_importances_
+varImp = pd.Series(varImp, index=lstKeepCols).sort_values()
+
+
 ## mae = ?? train ; ?? test
 ## mape = ?? train ; ?? test

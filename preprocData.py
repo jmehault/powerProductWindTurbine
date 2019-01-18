@@ -20,10 +20,10 @@ class AddFeatures(BaseEstimator, TransformerMixin):
         rSpeedMin = self.colMins['Rotor_speed']
         X = X.assign(Turbulence=np.log10((X.Rotor_speed_std / (X.Rotor_speed + rSpeedMin + 0.1) + 0.1)))
         X = X.assign(Rotor_speed3=X['Rotor_speed'] ** 3)
-        X = X.assign(Pitch_angle_x_Rotor_speed_std = X.Pitch_angle * X.Rotor_speed_std)
-        X = X.assign(Pitch_angle_std_x_Rotor_speed = X.Pitch_angle_std * X.Rotor_speed)
-        X = X.assign(Generator_stator_temperature_min_x_Pitch_angle_std = X.Generator_stator_temperature_min * X.Pitch_angle_std)
-        X = X.assign(Pitch_angle_max_x_Pitch_angle_min = X.Pitch_angle_max * X.Pitch_angle_min)
+        X = X.assign(Pitch_angle_x_Rotor_speedStd = X.Pitch_angle * X.Rotor_speed_std)
+        X = X.assign(Pitch_angleStd_x_Rotor_speed = X.Pitch_angle_std * X.Rotor_speed)
+        X = X.assign(Generator_stator_temperatureMin_x_Pitch_angleStd = X.Generator_stator_temperature_min * X.Pitch_angle_std)
+        X = X.assign(Pitch_angleMax_x_Pitch_angleMin = X.Pitch_angle_max * X.Pitch_angle_min)
         return X
 
 
