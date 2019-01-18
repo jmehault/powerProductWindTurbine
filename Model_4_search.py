@@ -36,7 +36,7 @@ addFeat.fit(df)
 df = addFeat.transform(df)
 
 ## séparation des individus suivant rotor_speed => non linéarité entre rotor_speed et target
-condi = df.Rotor_speed3>=15**3 # Rotor_speed>=15
+condi = df.Rotor_speed3>=16**3 # Rotor_speed>=15 ## test avec 16
 splitDataset = SplitEvents(condiSplit=condi)
 dfsup, dfinf = splitDataset.transform(df)
 wtPowersup, wtPowerinf = splitDataset.transform(wtPower)
@@ -216,3 +216,76 @@ gp.getAllResidPlot(ytrain, predTr, ytest, predTe)
 
 ## mae = 16 train ; 17 test
 ## mape = 1.2 train ; 0.90 test
+
+
+## tester modèle pour rotor_speed > 15
+# en calculant combinaisons de variable
+from sklearn.preprocessing import PolynomialFeatures, MinMaxScaler
+
+allCols = dfsup.columns
+lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
+notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
+           'Gearbox_bearing_2_temperature', 'Generator_speed', 'Hub_temperature', 'Gearbox_inlet_temperature',
+           'Generator_bearing_2_temperature','Generator_converter_speed', 'Grid_voltage', 'Grid_frequency']
+cleanCols = allCols[lstCols].difference(notKeep).tolist()
+
+modelsup = xgb.XGBRegressor(learning_rate=0.3, n_estimators=100, max_depth=3,
+                            colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
+poly = Pipeline([('selectCols', pp.SelectColumns(cleanCols)),
+                 ('poly', PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)),
+                 ('scale', MinMaxScaler(feature_range=(-10, 10))),
+                 ('xgbt', modelsup)])
+
+
+fittedSup = poly.fit(xtrainS, ytrainS)
+
+predTrS = pd.Series(fittedSup.predict(xtrainS), index=xtrainS.index)
+predTeS = pd.Series(fittedSup.predict(xtestS), index=xtestS.index)
+
+maeTrS = gp.getMAE(ytrainS, predTrS)
+maeTeS = gp.getMAE(ytestS, predTeS)
+print(f'MAE train = {maeTrS}\nMAE test = {maeTeS}')
+
+
+
+# ajout de combinaisons semble aider avec cleanCols
+# : MAE test = 62 sans poly, 62 avec poly(2), 59 avec poly(3)
+
+# avec toutes les colones et poly(2) : MAE test = 49 !!
+
+## voir quelles combinaisons sortent du lot !!
+polyFeatNames = ['x'.join(['{}^{}'.format(pair[0],pair[1]) for pair in tuple if pair[1]!=0]) for tuple in [zip(xtestS[cleanCols].columns,p) for p in poly.steps[1][1].powers_]] # cree liste des noms des nouvelles variables
+
+varImp = fittedSup.named_steps['xgbt'].feature_importances_
+varImp = pd.Series(varImp, index=polyFeatNames)
+
+Rotor_speed^1xRotor_speed_max^1                                            0.141641
+* Rotor_speed3^1xRotor_speed_max^1                                           0.124594
+** Pitch_angle^1xRotor_speed_std^1                                            0.113983
+Generator_speed^1xGenerator_speed_max^1                                    0.076287
+* Gearbox_bearing_2_temperature^1xRotor_speed3^1                             0.069622
+* Generator_speed^1xPitch_angle_std^1                                        0.058760
+Generator_bearing_1_temperature^1xGenerator_bearing_1_temperature_max^1    0.049569
+Generator_bearing_1_temperature_max^1xPitch_angle^1                        0.046212
+Generator_speed^1xRotor_speed_max^1                                        0.018060
+ Grid_voltage_max^1xRotor_speed3^1                                          0.015353
+* Generator_bearing_1_temperature^1xGrid_frequency_min^1                     0.014971
+** Generator_stator_temperature_min^1xPitch_angle_std^1                       0.014888
+* Grid_frequency_min^1xPitch_angle^1                                         0.013456
+Pitch_angle_max^1xRotor_speed_std^1                                        0.012991
+* Pitch_angle^1xTurbulence^1                                                 0.011479
+Pitch_angle_max^1xRotor_speed_min^1                                        0.011136
+Generator_bearing_1_temperature_max^1xGrid_voltage_max^1                   0.010059
+Generator_bearing_1_temperature_max^1xGrid_voltage^1                       0.009134
+Generator_speed^1xGrid_voltage^1                                           0.008555
+** Pitch_angle_max^1xPitch_angle_min^1                                        0.008338
+Generator_speed_std^1xPitch_angle_max^1                                    0.008168
+Grid_voltage^1xPitch_angle^1                                               0.006886
+* Generator_converter_speed_max^1xGenerator_stator_temperature_min^1         0.006650
+Generator_speed_max^1xRotor_speed3^1                                       0.006340
+Generator_speed^1xRotor_speed3^1                                           0.006093
+Generator_bearing_2_temperature^1xGenerator_speed^1                        0.005260
+Generator_bearing_1_temperature_max^1xRotor_speed_min^1                    0.004927
+Generator_stator_temperature^1                                             0.004301
+Generator_bearing_1_temperature_max^1xPitch_angle_max^1                    0.003798
+Generator_stator_temperature^1xRotor_speed^1                               0.003603

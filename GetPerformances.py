@@ -7,6 +7,8 @@ import pandas as pd
 def getMAE(yt, yp):
     return mean_absolute_error(yt, yp)
 
+def getError(yt, yp):
+    return (yt - yp)
 
 def getAE(yt, yp):
     return np.abs(yt - yp)

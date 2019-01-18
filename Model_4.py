@@ -1,3 +1,4 @@
+import os
 import ReadFiles
 import preprocData as pp
 import numpy as np
@@ -59,7 +60,12 @@ testDatasup = impMedian.transform(testDatasup)
 
 ## modèle basses vitesses
 # sélectionner toutes les colonnes sans valeur manquante
-lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+#lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+allCols = df.columns[(dfinf.isnull().sum()==0)]
+notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+           "Absolute_wind_direction_c"]
+lstKeepCols = allCols.difference(notKeep).tolist()
 
 modelInf = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
                          colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
@@ -72,7 +78,11 @@ testDatainf_pred = pd.Series(fittedInf.predict(testDatainf), index=testDatainf.i
 
 
 ## modèle hautes vitesses
-lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+allCols = df.columns[(dfsup.isnull().sum()==0)]
+notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+           "Absolute_wind_direction_c"]
+lstKeepCols = allCols.difference(notKeep).tolist()
 
 modelSup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
                             colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
@@ -81,13 +91,13 @@ pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
 
 fittedSup = pipeSup.fit(dfsup, wtPowersup)
 
-testDatasup_pred = pd.Series(fittedSup.predict(testDatainf), index=testDatainf.index, name='TARGET')
+testDatasup_pred = pd.Series(fittedSup.predict(testDatasup), index=testDatasup.index, name='TARGET')
 
 ##############
 ## prédiction finale
 pred = pd.concat((testDatainf_pred, testDatasup_pred),axis=0).sort_index()
 
-## mae = 16 train ; 17 test
+## mae = 15 train ; 16 test
 ## mape = 1.2 train ; 0.90 test
 
 ##############

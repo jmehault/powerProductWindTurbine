@@ -850,3 +850,11 @@ nacelle_temperature_std>2.25
 
 ## supprimer des valeurs abérantes
 ## supprimer colonnes avec valeurs manquantes
+
+
+
+
+### plus grandes erreurs pour TARGET > 600 ou 800
+# faire regression linéaire puis arbres sur prediction >600 ou 800 ?
+
+## voir pour créer des variables de croisement
