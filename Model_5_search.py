@@ -124,5 +124,4 @@ varImp = fitted.named_steps['model'].feature_importances_
 varImp = pd.Series(varImp, index=lstKeepCols).sort_values()
 
 
-## mae = ?? train ; ?? test
-## mape = ?? train ; ?? test
+## mae = 14 train ; 17 test avec 200 arbres
