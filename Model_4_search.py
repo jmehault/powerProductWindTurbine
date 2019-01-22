@@ -1,7 +1,6 @@
 import ReadFiles
 import GetPerformances as gp
 import preprocData as pp
-
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, cross_validate
@@ -55,12 +54,18 @@ dfsup = impMedian.transform(dfsup)
 ### validation croisée
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
 
-allCols = dfinf.columns
+#allCols = dfinf.columns
 #lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
-notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
-           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
-           "Absolute_wind_direction_c"]
-lstKeepCols = allCols.difference(notKeep).tolist()
+#notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+#           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+#           "Absolute_wind_direction_c"]
+#lstKeepCols = allCols.difference(notKeep).tolist()
+
+lstKeepCols = ['Generator_bearing_1_temperature',
+               'Outdoor_temperature_max', 'Nacelle_temperature_max', 'Rotor_speed_max',
+               'Pitch_angle_x_Rotor_speedStd', 'Pitch_angleStd_x_Rotor_speed',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed3']
 
 #lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
 #                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
@@ -80,7 +85,12 @@ scores = cross_validate(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolu
 ## modèle sur rotor_speed<15
 xtrainI, xtestI, ytrainI, ytestI = train_test_split(dfinf, wtPowerinf, test_size=0.2, random_state=345)
 
-lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+#lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+lstKeepCols = ['Generator_bearing_1_temperature',
+               'Outdoor_temperature_max', 'Nacelle_temperature_max', 'Rotor_speed_max',
+               'Pitch_angle_x_Rotor_speedStd', 'Pitch_angleStd_x_Rotor_speed',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed3']
 
 ## optimisation des paramètres par méthode bayesienne
 # function to be maximized - must find (x=0;y=10)
@@ -109,6 +119,11 @@ bo.maximize(init_points=5, n_iter=5)
 ## modèle
 # sélectionner toutes les colonnes sans valeur manquante : quelles informations importantes ?
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+lstKeepCols = ['Generator_bearing_1_temperature',
+               'Outdoor_temperature_max', 'Nacelle_temperature_max', 'Rotor_speed_max',
+               'Pitch_angle_x_Rotor_speedStd', 'Pitch_angleStd_x_Rotor_speed',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed3']
 # meileure sélection :
 #lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
 #                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
@@ -130,6 +145,26 @@ predTeI = pd.Series(fitted.predict(xtestI), index=xtestI.index)
 maeTrI = gp.getMAE(ytrainI, predTrI)
 maeTeI = gp.getMAE(ytestI, predTeI)
 print(f'MAE train = {maeTrI}\nMAE test = {maeTeI}')
+
+
+Rotor_speed_std                                     0.001036
+Generator_stator_temperature                        0.001052
+Generator_bearing_2_temperature_max                 0.001100
+Generator_bearing_2_temperature_min                 0.001250
+Generator_bearing_1_temperature                     0.001311
+Generator_bearing_2_temperature                     0.001316
+Outdoor_temperature_max                             0.001368
+Nacelle_temperature_max                             0.001372
+Rotor_speed_max                                     0.001964
+Pitch_angle_x_Rotor_speedStd                        0.002274
+Pitch_angleStd_x_Rotor_speed                        0.002336
+Generator_stator_temperatureMin_x_Pitch_angleStd    0.002984
+Pitch_angle                                         0.003566
+Generator_speed_max                                 0.004212
+Pitch_angle_max                                     0.004867
+Generator_speed                                     0.121479
+Rotor_speed3                                        0.274829
+Rotor_speed                                         0.556355
 
 
 ## optimisation des hyper-paramètres de la forêt
@@ -174,6 +209,28 @@ scores = cross_validate(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_abs
 ## modèle sur rotor_speed>=15
 xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, random_state=3456)
 
+lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+lstKeepCols = ['Absolute_wind_direction', 'Nacelle_angle_min', 'Outdoor_temperature',
+               'Gearbox_oil_sump_temperature', 'Hub_temperature_max',
+               'Outdoor_temperature_min',
+               'Rotor_bearing_temperature_max', 'Hub_temperature_min',
+               'Generator_stator_temperature_std', 'Outdoor_temperature_std',
+               'Rotor_speed_std', 'Nacelle_temperature_min',
+               'Gearbox_bearing_2_temperature_std',
+               #'Gearbox_bearing_1_temperature_std',
+               'Generator_speed_min',
+               'Gearbox_bearing_1_temperature', 'Turbulence',
+               #'Generator_bearing_2_temperature',
+               'Generator_speed_std',
+               'Nacelle_temperature', 'Generator_bearing_1_temperature',
+               'Generator_stator_temperature_max', 'Pitch_angle_x_Rotor_speedStd',
+               'Generator_speed_max',
+               'Generator_stator_temperature',
+               'Pitch_angleMax_x_Pitch_angleMin', 'Nacelle_temperature_max',
+               'Generator_bearing_1_temperature_min', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed', 'Pitch_angle_std', 'Rotor_speed3',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd',
+               'Pitch_angleStd_x_Rotor_speed']
 #allCols = dfsup.columns
 #lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
 #notKeep = ["TARGET", "LogTARGET", "MAC_CODE", "Date_time", "Absolute_wind_direction", "Nacelle_angle",
@@ -289,3 +346,83 @@ Generator_bearing_1_temperature_max^1xRotor_speed_min^1                    0.004
 Generator_stator_temperature^1                                             0.004301
 Generator_bearing_1_temperature_max^1xPitch_angle_max^1                    0.003798
 Generator_stator_temperature^1xRotor_speed^1                               0.003603
+
+
+col1 = 'Generator_stator_temperatureMin_x_Pitch_angleStd'
+col2 = 'Pitch_angleStd_x_Rotor_speed'
+f, axes = plt.subplots(2, 2, sharey=False)
+axes[0,0].scatter(df[col1], df[col2], s=6, alpha=0.2)
+axes[1,0].scatter(df[col1], wtPower, s=6, alpha=0.2)
+axes[0,1].scatter(wtPower, df[col2], s=6, alpha=0.2)
+axes[1,0].set_title(col1)
+axes[0,1].set_title(col2)
+plt.show()
+
+## calcul importance des variables avec somme sur trois splits différents
+['Grid_frequency_max',
+ 'Grid_frequency',
+ 'Grid_frequency_min',
+ 'Hub_temperature_std',
+ 'Grid_frequency_std',
+ 'Gearbox_bearing_2_temperature',
+ 'Generator_bearing_2_temperature_std',
+ 'Gearbox_bearing_1_temperature_min',
+ 'Gearbox_bearing_2_temperature_max',
+ 'Nacelle_temperature_std',
+ 'Nacelle_angle_std',
+ 'Gearbox_bearing_2_temperature_min',
+ 'Generator_bearing_1_temperature_std',
+ 'Gearbox_bearing_1_temperature_max',
+ 'Rotor_bearing_temperature_std',
+ 'Gearbox_oil_sump_temperature_std',
+ 'Gearbox_oil_sump_temperature_max',
+ 'Rotor_bearing_temperature_min',
+ 'Nacelle_angle',
+ 'Absolute_wind_direction',
+ 'Hub_temperature',
+ 'Rotor_bearing_temperature',
+ 'Nacelle_angle_min',
+ 'Outdoor_temperature',
+ 'Gearbox_oil_sump_temperature',
+ 'Hub_temperature_max',
+ 'Gearbox_oil_sump_temperature_min',
+ 'Outdoor_temperature_min',
+ 'Rotor_bearing_temperature_max',
+ 'Hub_temperature_min',
+ 'Nacelle_angle_max',
+ 'Outdoor_temperature_max',
+ 'Generator_stator_temperature_std',
+ 'Outdoor_temperature_std',
+ 'Rotor_speed_std',
+ 'Nacelle_temperature_min',
+ 'Gearbox_bearing_2_temperature_std',
+ 'Gearbox_bearing_1_temperature_std',
+ 'Generator_speed_min',
+ 'Gearbox_bearing_1_temperature',
+ 'Turbulence',
+ 'Generator_bearing_2_temperature',
+ 'Generator_bearing_2_temperature_min',
+ 'Pitch_angle_min',
+ 'Generator_speed_std',
+ 'Generator_bearing_2_temperature_max',
+ 'Nacelle_temperature',
+ 'Generator_bearing_1_temperature',
+ 'Generator_stator_temperature_max',
+ 'Pitch_angle_x_Rotor_speedStd',
+ 'Generator_stator_temperature_min',
+ 'Generator_speed_max',
+ 'Rotor_speed_max',
+ 'Rotor_speed_min',
+ 'Generator_stator_temperature',
+ 'Pitch_angleMax_x_Pitch_angleMin',
+ 'Nacelle_temperature_max',
+ 'Generator_bearing_1_temperature_min',
+ 'Pitch_angle',
+ 'Generator_bearing_1_temperature_max',
+ 'Generator_speed',
+ 'Pitch_angle_max',
+ 'Rotor_speed',
+ 'Pitch_angle_std',
+ 'Rotor_speed3',
+ 'Generator_stator_temperatureMin_x_Pitch_angleStd',
+ 'Pitch_angleStd_x_Rotor_speed']

@@ -61,11 +61,16 @@ testDatasup = impMedian.transform(testDatasup)
 ## modèle basses vitesses
 # sélectionner toutes les colonnes sans valeur manquante
 #lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
-allCols = df.columns[(dfinf.isnull().sum()==0)]
-notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
-           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
-           "Absolute_wind_direction_c"]
-lstKeepCols = allCols.difference(notKeep).tolist()
+#allCols = df.columns[(dfinf.isnull().sum()==0)]
+#notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+#           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+#           "Absolute_wind_direction_c"]
+#lstKeepCols = allCols.difference(notKeep).tolist()
+lstKeepCols = ['Generator_bearing_1_temperature',
+               'Outdoor_temperature_max', 'Nacelle_temperature_max', 'Rotor_speed_max',
+               'Pitch_angle_x_Rotor_speedStd', 'Pitch_angleStd_x_Rotor_speed',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed3']
 
 modelInf = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
                          colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
@@ -78,11 +83,31 @@ testDatainf_pred = pd.Series(fittedInf.predict(testDatainf), index=testDatainf.i
 
 
 ## modèle hautes vitesses
-allCols = df.columns[(dfsup.isnull().sum()==0)]
-notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
-           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
-           "Absolute_wind_direction_c"]
-lstKeepCols = allCols.difference(notKeep).tolist()
+#allCols = df.columns[(dfsup.isnull().sum()==0)]
+#notKeep = ["MAC_CODE", "Date_time", "Nacelle_angle", 'Generator_speed', 'Generator_converter_speed',
+#           "Outdoor_temperature_max", "Outdoor_temperature_min", "Outdoor_temperature",
+#           "Absolute_wind_direction_c"]
+#lstKeepCols = allCols.difference(notKeep).tolist()
+lstKeepCols = ['Absolute_wind_direction', 'Nacelle_angle_min', 'Outdoor_temperature',
+               'Gearbox_oil_sump_temperature', 'Hub_temperature_max',
+               'Outdoor_temperature_min',
+               'Rotor_bearing_temperature_max', 'Hub_temperature_min',
+               'Generator_stator_temperature_std', 'Outdoor_temperature_std',
+               'Rotor_speed_std', 'Nacelle_temperature_min',
+               'Gearbox_bearing_2_temperature_std',
+               'Gearbox_bearing_1_temperature_std', 'Generator_speed_min',
+               'Gearbox_bearing_1_temperature', 'Turbulence',
+               'Generator_bearing_2_temperature',
+               'Generator_speed_std',
+               'Nacelle_temperature', 'Generator_bearing_1_temperature',
+               'Generator_stator_temperature_max', 'Pitch_angle_x_Rotor_speedStd',
+               'Generator_speed_max',
+               'Generator_stator_temperature',
+               'Pitch_angleMax_x_Pitch_angleMin', 'Nacelle_temperature_max',
+               'Generator_bearing_1_temperature_min', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed', 'Pitch_angle_std', 'Rotor_speed3',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd',
+               'Pitch_angleStd_x_Rotor_speed']
 
 modelSup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
                             colsample_bytree=0.5, subsample=0.75, n_jobs=-1)
