@@ -75,7 +75,7 @@ model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=3,
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
 
-kf = KFold(5)
+kf = KFold(5, shuffle=True)
 scores = cross_val_score(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolute_error')
 
 scores = cross_validate(pipe, dfinf, wtPowerinf, cv=kf, scoring='neg_mean_absolute_error',
@@ -199,7 +199,7 @@ modelsup = xgb.XGBRegressor(earning_rate=0.1, n_estimators=1500, max_depth=3,
 pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelsup)])
 
-kf = KFold(5)
+kf = KFold(5, shuffle=True)
 scores = cross_val_score(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error')
 
 scores = cross_validate(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error', return_train_score=True, n_jobs=-1)
@@ -426,3 +426,49 @@ plt.show()
  'Rotor_speed3',
  'Generator_stator_temperatureMin_x_Pitch_angleStd',
  'Pitch_angleStd_x_Rotor_speed']
+
+
+
+### pour rotor_speed>15 : entre 2 modèles différents (par hyper paramètres de modèle) certains points immobiles dans les résidus.
+# voir pourquoi
+xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, random_state=3456)
+
+lstKeepCols = ['Absolute_wind_direction', 'Nacelle_angle_min', 'Outdoor_temperature',
+               'Gearbox_oil_sump_temperature', 'Hub_temperature_max',
+               'Outdoor_temperature_min',
+               'Rotor_bearing_temperature_max', 'Hub_temperature_min',
+               'Generator_stator_temperature_std', 'Outdoor_temperature_std',
+               'Rotor_speed_std', 'Nacelle_temperature_min',
+               'Gearbox_bearing_2_temperature_std',
+               'Generator_speed_min',
+               'Gearbox_bearing_1_temperature', 'Turbulence',
+               'Generator_speed_std',
+               'Nacelle_temperature', 'Generator_bearing_1_temperature',
+               'Generator_stator_temperature_max', 'Pitch_angle_x_Rotor_speedStd',
+               'Generator_speed_max',
+               'Generator_stator_temperature',
+               'Pitch_angleMax_x_Pitch_angleMin', 'Nacelle_temperature_max',
+               'Generator_bearing_1_temperature_min', 'Pitch_angle',
+               'Pitch_angle_max', 'Rotor_speed', 'Pitch_angle_std', 'Rotor_speed3',
+               'Generator_stator_temperatureMin_x_Pitch_angleStd',
+               'Pitch_angleStd_x_Rotor_speed']
+
+predVarModel = pd.DataFrame(columns=['n_estim200', 'n_estim600'], index=xtrainS.index)
+for n_estim in [200, 600] :
+  modelsup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=200, max_depth=3,
+                              colsample_bytree=1, subsample=0.75, n_jobs=-1)
+  pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
+                      ('model', modelsup)])
+  
+  fittedSup = pipeSup.fit(xtrainS, ytrainS)
+  predVarModel.at[:, f'n_estim{n_estim}'] = fittedSup.predict(xtrainS)
+
+
+#predTrS = pd.Series(fittedSup.predict(xtrainS), index=xtrainS.index)
+#predTeS = pd.Series(fittedSup.predict(xtestS), index=xtestS.index)
+#
+#maeTrS = gp.getMAE(ytrainS, predTrS)
+#maeTeS = gp.getMAE(ytestS, predTeS)
+#print(f'MAE train = {maeTrS}\nMAE test = {maeTeS}')
+#
+#gp.getAllResidPlot(ytrainS, predTrS, ytestS, predTeS)
