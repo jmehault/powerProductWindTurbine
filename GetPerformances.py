@@ -8,7 +8,7 @@ def getMAE(yt, yp):
     return mean_absolute_error(yt, yp)
 
 def getError(yt, yp):
-    return (yt - yp)
+    return (yp - yt)
 
 def getAE(yt, yp):
     return np.abs(yt - yp)
@@ -51,6 +51,33 @@ def getAllResidPlot(ytr, yptr, yte, ypte):
     plt.title(f'Erreur absolue moyenne test\n{maete}')
     plt.subplot(2, 2, 4)
     plt.plot(yte, getAE(yte, ypte), '.')
+    plt.xlabel('Observé test')
+    plt.show()
+
+def getAllResidPlot(ytr, yptr, yte, ypte):
+    maetr = np.round(getMAE(ytr, yptr), 2)
+    maete = np.round(getMAE(yte, ypte), 2)
+    f = plt.figure(figsize=(8, 10))
+    plt.subplot(3, 2, 1)
+    plt.plot(ytr, yptr, '.')
+    plt.plot([0, ytr.max()], [0, ytr.max()], 'r.-')
+    plt.ylabel('Prédiction')
+    plt.title(f'Erreur absolue moyenne train\n{maetr}')
+    plt.subplot(3, 2, 3)
+    plt.plot(ytr, getAE(ytr, yptr), '.')
+    plt.ylabel('Erreur absolue')
+    plt.subplot(3, 2, 5)
+    plt.plot(ytr, getError(ytr, yptr), '.')
+    plt.xlabel('Observé train')
+    plt.ylabel('Erreur')
+    plt.subplot(3, 2, 2)
+    plt.plot(yte, ypte, '.')
+    plt.plot([0, yte.max()], [0, yte.max()], 'r.-')
+    plt.title(f'Erreur absolue moyenne test\n{maete}')
+    plt.subplot(3, 2, 4)
+    plt.plot(yte, getAE(yte, ypte), '.')
+    plt.subplot(3, 2, 6)
+    plt.plot(ytr, getError(yte, ypte), '.')
     plt.xlabel('Observé test')
     plt.show()
 

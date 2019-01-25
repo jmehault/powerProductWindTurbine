@@ -453,22 +453,29 @@ lstKeepCols = ['Absolute_wind_direction', 'Nacelle_angle_min', 'Outdoor_temperat
                'Generator_stator_temperatureMin_x_Pitch_angleStd',
                'Pitch_angleStd_x_Rotor_speed']
 
-predVarModel = pd.DataFrame(columns=['n_estim200', 'n_estim600'], index=xtrainS.index)
+predTrVarModel = pd.DataFrame(columns=['n_estim200', 'n_estim600'], index=xtrainS.index)
+predTeVarModel = pd.DataFrame(columns=['n_estim200', 'n_estim600'], index=xtestS.index)
 for n_estim in [200, 600] :
-  modelsup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=200, max_depth=3,
+  modelsup = xgb.XGBRegressor(learning_rate=0.1, n_estimators=n_estim, max_depth=3,
                               colsample_bytree=1, subsample=0.75, n_jobs=-1)
   pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                       ('model', modelsup)])
   
   fittedSup = pipeSup.fit(xtrainS, ytrainS)
-  predVarModel.at[:, f'n_estim{n_estim}'] = fittedSup.predict(xtrainS)
+  predTrVarModel.at[:, f'n_estim{n_estim}'] = fittedSup.predict(xtrainS)
+  predTeVarModel.at[:, f'n_estim{n_estim}'] = fittedSup.predict(xtestS)
 
 
-#predTrS = pd.Series(fittedSup.predict(xtrainS), index=xtrainS.index)
-#predTeS = pd.Series(fittedSup.predict(xtestS), index=xtestS.index)
-#
-#maeTrS = gp.getMAE(ytrainS, predTrS)
-#maeTeS = gp.getMAE(ytestS, predTeS)
-#print(f'MAE train = {maeTrS}\nMAE test = {maeTeS}')
-#
-#gp.getAllResidPlot(ytrainS, predTrS, ytestS, predTeS)
+## etude résidus
+# gp.getAllResidPlot(ytrainS, predTrVarModel.n_estim200, ytrainS, predTrVarModel.n_estim600)
+# biais dans prédiction : résidus décroissants avec target, même en prenant toutes les colonnes
+
+# étude corrélation entre résidus et ytrainS
+xtrainS = xtrainS.assign(residus = getError(ytrainS, predTrVarModel.n_estim200))
+corrResid = xtrainS[lstKeepCols+['residus']].corr(method='spearman')
+# toutes les colonnes sont indépendantes des résidus
+
+#=> trouver autre variables pouvant décrire la tendance des résidus
+
+
+## voir si vrai aussi pour rotor_speed <15
