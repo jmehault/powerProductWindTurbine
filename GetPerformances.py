@@ -77,7 +77,7 @@ def getAllResidPlot(ytr, yptr, yte, ypte):
     plt.subplot(3, 2, 4)
     plt.plot(yte, getAE(yte, ypte), '.')
     plt.subplot(3, 2, 6)
-    plt.plot(ytr, getError(yte, ypte), '.')
+    plt.plot(yte, getError(yte, ypte), '.')
     plt.xlabel('Observé test')
     plt.show()
 

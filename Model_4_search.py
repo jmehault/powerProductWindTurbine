@@ -469,13 +469,14 @@ for n_estim in [200, 600] :
 ## etude résidus
 # gp.getAllResidPlot(ytrainS, predTrVarModel.n_estim200, ytrainS, predTrVarModel.n_estim600)
 # biais dans prédiction : résidus décroissants avec target, même en prenant toutes les colonnes
+# corrélation (residués, target) ~ -0.2
 
 # étude corrélation entre résidus et ytrainS
 xtrainS = xtrainS.assign(residus = getError(ytrainS, predTrVarModel.n_estim200))
 corrResid = xtrainS[lstKeepCols+['residus']].corr(method='spearman')
 # toutes les colonnes sont indépendantes des résidus
 
-#=> trouver autre variables pouvant décrire la tendance des résidus
-
+#=> trouver autre variable pouvant décrire la tendance des résidus
+# ou bien multi modèle ??
 
 ## voir si vrai aussi pour rotor_speed <15
