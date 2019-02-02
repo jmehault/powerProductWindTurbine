@@ -20,10 +20,24 @@ class AddFeatures(BaseEstimator, TransformerMixin):
         rSpeedMin = self.colMins['Rotor_speed']
         X = X.assign(Turbulence=np.log10((X.Rotor_speed_std / (X.Rotor_speed + rSpeedMin + 0.1) + 0.1)))
         X = X.assign(Rotor_speed3=X['Rotor_speed'] ** 3)
+        ## combinaison de variables
         X = X.assign(Pitch_angle_x_Rotor_speedStd = X.Pitch_angle * X.Rotor_speed_std)
         X = X.assign(Pitch_angleStd_x_Rotor_speed = X.Pitch_angle_std * X.Rotor_speed)
         X = X.assign(Generator_stator_temperatureMin_x_Pitch_angleStd = X.Generator_stator_temperature_min * X.Pitch_angle_std)
         X = X.assign(Pitch_angleMax_x_Pitch_angleMin = X.Pitch_angle_max * X.Pitch_angle_min)
+        X = X.assign(Speed_div_Pitch = X.Rotor_speed/X.Pitch_angle)
+        ## variation de pitch angle moyen sur 20 minutes
+        grwt = X.groupby('MAC_CODE')
+        X = X.assign(Pitch_Before = grwt.Pitch_angle.shift(1)-X.Pitch_angle)
+        X = X.assign(RotorS3_Before = grwt.Rotor_speed3.shift(1)-X.Rotor_speed3)
+        ## code éolienne 1,3 et 2,4 groupées
+        wt = 1*( (X.MAC_CODE=='WT1') | (X.MAC_CODE=='WT3') )
+        wt.name = 'WT13'
+        X = pd.concat((X,wt), axis=1)
+        wt = 1*( (X.MAC_CODE=='WT2') | (X.MAC_CODE=='WT4') )
+        wt.name = 'WT24'
+        X = pd.concat((X,wt), axis=1)
+        X = X.assign(eolCombi = X.WT24 + X.WT13*-1)
         return X
 
 

@@ -70,7 +70,7 @@ lstKeepCols = ['Generator_bearing_1_temperature',
 #lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
 #                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
 #model = GradientBoostingRegressor(n_estimators=500, max_depth=3)
-model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=3,
+model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=500, max_depth=3,
                          colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
@@ -104,26 +104,27 @@ def targetFunction(lstKeepCols=lstKeepCols, n_estimators=100, max_depth=3,
     return score.mean()
 
 # define parameters bounds
-bounds = {'n_estimators': (100, 700), 'max_depth': (3, 9),
-          'colsample_bytree': (0.25, 1.), 'subsample': (0.5, 1.)}
+bounds = {'n_estimators': (300, 1000), 'max_depth': (3, 6),
+          'colsample_bytree': (0.5, 1.), 'subsample': (0.75, 1.)}
 btypes = {'n_estimators':int, 'max_depth':int, 'colsample_bytree':float, 'subsample':float}
 bo = BayesianOptimization(targetFunction, bounds) #,  ptypes=btypes)
 
 bo.probe({'n_estimators':500, 'max_depth':6, 'colsample_bytree':0.75, 'subsample':0.75})
-bo.probe({'n_estimators':250, 'max_depth':3, 'colsample_bytree':0.5, 'subsample':0.75})
-bo.probe({'n_estimators':100, 'max_depth':9, 'colsample_bytree':1, 'subsample':1})
+bo.probe({'n_estimators':300, 'max_depth':3, 'colsample_bytree':0.5, 'subsample':0.75})
+bo.probe({'n_estimators':400, 'max_depth':6, 'colsample_bytree':1, 'subsample':1})
 
-bo.maximize(init_points=5, n_iter=5)
+bo.maximize(init_points=3, n_iter=5)
 
 
 ## modèle
 # sélectionner toutes les colonnes sans valeur manquante : quelles informations importantes ?
-lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
+#lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
 lstKeepCols = ['Generator_bearing_1_temperature',
                'Outdoor_temperature_max', 'Nacelle_temperature_max', 'Rotor_speed_max',
                'Pitch_angle_x_Rotor_speedStd', 'Pitch_angleStd_x_Rotor_speed',
                'Generator_stator_temperatureMin_x_Pitch_angleStd', 'Pitch_angle',
-               'Pitch_angle_max', 'Rotor_speed3']
+               'Pitch_angle_max', 'Rotor_speed3', 'Speed_div_Pitch', 'Pitch_Before',
+               'RotorS3_Before']
 # meileure sélection :
 #lstKeepCols = ['Generator_speed', 'Rotor_speed3', 'Pitch_angle_std', 'Pitch_angle', \
 #                'Generator_speed_max', 'Pitch_angle_max', 'Generator_stator_temperature', 'Generator_bearing_1_temperature']
@@ -131,7 +132,7 @@ lstKeepCols = ['Generator_bearing_1_temperature',
 #               'Gearbox_bearing_1_temperature', 'Generator_stator_temperature_std', \
 #               'Turbulence']
 #model = xgb.XGBRegressor(colsample_bytree=1, subsample=1, n_estimators=680, max_depth=9, n_jobs=-1)
-model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=1500, max_depth=4,
+model = xgb.XGBRegressor(learning_rate=0.1, n_estimators=500, max_depth=3,
                          colsample_bytree=0.75, subsample=1, reg_lambda=0.05, n_jobs=-1)
 pipe = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                  ('model', model)])
@@ -200,8 +201,6 @@ pipeSup = Pipeline([('selectCols', pp.SelectColumns(lstKeepCols)),
                     ('model', modelsup)])
 
 kf = KFold(5, shuffle=True)
-scores = cross_val_score(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error')
-
 scores = cross_validate(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_absolute_error', return_train_score=True, n_jobs=-1)
 
 
@@ -210,9 +209,10 @@ scores = cross_validate(pipeSup, dfsup, wtPowersup, cv=kf, scoring='neg_mean_abs
 xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size=0.2, random_state=3456)
 
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
-lstKeepCols = ['Absolute_wind_direction', 'Nacelle_angle_min', 'Outdoor_temperature',
-               'Gearbox_oil_sump_temperature', 'Hub_temperature_max',
-               'Outdoor_temperature_min',
+lstKeepCols = [ #'Absolute_wind_direction',
+               'Nacelle_angle_min', 'Outdoor_temperature',
+               'Gearbox_oil_sump_temperature', #'Hub_temperature_max',
+               #'Outdoor_temperature_min',
                'Rotor_bearing_temperature_max', 'Hub_temperature_min',
                'Generator_stator_temperature_std', 'Outdoor_temperature_std',
                'Rotor_speed_std', 'Nacelle_temperature_min',
@@ -226,10 +226,10 @@ lstKeepCols = ['Absolute_wind_direction', 'Nacelle_angle_min', 'Outdoor_temperat
                'Generator_stator_temperature_max', 'Pitch_angle_x_Rotor_speedStd',
                'Generator_speed_max',
                'Generator_stator_temperature',
-               'Pitch_angleMax_x_Pitch_angleMin', 'Nacelle_temperature_max',
+               'Pitch_angleMax_x_Pitch_angleMin', #'Nacelle_temperature_max',
                'Generator_bearing_1_temperature_min', 'Pitch_angle',
-               'Pitch_angle_max', 'Rotor_speed', 'Pitch_angle_std', 'Rotor_speed3',
-               'Generator_stator_temperatureMin_x_Pitch_angleStd',
+               'Pitch_angle_max', 'Pitch_angle_std', 'Rotor_speed3', #'Rotor_speed',
+               #'Generator_stator_temperatureMin_x_Pitch_angleStd',
                'Pitch_angleStd_x_Rotor_speed']
 #allCols = dfsup.columns
 #lstCols = ~(allCols.str.endswith("_min") | allCols.str.endswith("_max") | allCols.str.endswith("_std") | allCols.str.endswith("_c"))
@@ -477,6 +477,22 @@ corrResid = xtrainS[lstKeepCols+['residus']].corr(method='spearman')
 # toutes les colonnes sont indépendantes des résidus
 
 #=> trouver autre variable pouvant décrire la tendance des résidus
+# combinaison polynomiale avec ordre plus grand ? => poly(3) avec variables pour rotor_speed>15 donne MAE~ 17 au lieu de 18 pour toutes les données
+# => mais biais toujours présent
+# voir si nouvelles variables pertinentes
+
 # ou bien multi modèle ??
 
 ## voir si vrai aussi pour rotor_speed <15
+# => vrai aussi
+
+## créer variables combinées par nom d'éolienne : WT13 / WT24
+
+lstColEolCombi = []
+In [34]: for col in lstKeepCols: 
+    ...:     tmp = dfsup[col] * dfsup['eolCombi'] 
+    ...:     tmp.name = f'{col}_eolCombi' 
+    ...:     lstColEolCombi.append(tmp.name)
+    ...:     dfsup = pd.concat((dfsup, tmp),axis=1)
+
+modèle avec lstKeepCols + lstColEolCombi

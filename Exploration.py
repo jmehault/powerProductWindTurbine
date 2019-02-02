@@ -858,3 +858,4 @@ nacelle_temperature_std>2.25
 # faire regression linéaire puis arbres sur prediction >600 ou 800 ?
 
 ## voir pour créer des variables de croisement
+# croisement entre wt13, wt24 et autres variables
