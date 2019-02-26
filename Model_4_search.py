@@ -211,7 +211,7 @@ xtrainS, xtestS, ytrainS, ytestS = train_test_split(dfsup, wtPowersup, test_size
 lstKeepCols = df.columns[(df.isnull().sum()==0)].difference(['MAC_CODE', 'Date_time'])
 lstKeepCols = [ #'Absolute_wind_direction',
                'Nacelle_angle_min', 'Outdoor_temperature',
-               'Gearbox_oil_sump_temperature', #'Hub_temperature_max',
+               #'Gearbox_oil_sump_temperature', #'Hub_temperature_max',
                #'Outdoor_temperature_min',
                'Rotor_bearing_temperature_max', 'Hub_temperature_min',
                'Generator_stator_temperature_std', 'Outdoor_temperature_std',
@@ -227,7 +227,8 @@ lstKeepCols = [ #'Absolute_wind_direction',
                'Generator_speed_max',
                'Generator_stator_temperature',
                'Pitch_angleMax_x_Pitch_angleMin', #'Nacelle_temperature_max',
-               'Generator_bearing_1_temperature_min', 'Pitch_angle',
+               #'Generator_bearing_1_temperature_min',
+               'Pitch_angle',
                'Pitch_angle_max', 'Pitch_angle_std', 'Rotor_speed3', #'Rotor_speed',
                #'Generator_stator_temperatureMin_x_Pitch_angleStd',
                'Pitch_angleStd_x_Rotor_speed']
@@ -489,10 +490,20 @@ corrResid = xtrainS[lstKeepCols+['residus']].corr(method='spearman')
 ## créer variables combinées par nom d'éolienne : WT13 / WT24
 
 lstColEolCombi = []
-In [34]: for col in lstKeepCols: 
-    ...:     tmp = dfsup[col] * dfsup['eolCombi'] 
-    ...:     tmp.name = f'{col}_eolCombi' 
-    ...:     lstColEolCombi.append(tmp.name)
-    ...:     dfsup = pd.concat((dfsup, tmp),axis=1)
+for col in lstKeepCols:
+     tmp = dfsup[col] * dfsup['eolCombi']
+     tmp.name = f'{col}_eolCombi'
+     lstColEolCombi.append(tmp.name)
+     dfsup = pd.concat((dfsup, tmp),axis=1)
 
 modèle avec lstKeepCols + lstColEolCombi
+
+
+Generator_bearing_1_temperature_min_eolCombi
+Generator_stator_temperature_eolCombi
+Pitch_angleStd_x_Rotor_speed_eolCombi
+Pitch_angle_x_Rotor_speedStd_eolCombi
+Gearbox_oil_sump_temperature_eolCombi
+Generator_stator_temperature_max_eolCombi
+Outdoor_temperature_std_eolCombi
+Rotor_bearing_temperature_max_eolCombi
