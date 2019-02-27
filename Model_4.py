@@ -19,20 +19,20 @@ class SplitEvents():
         X_f = X[~self.condiSplit]
         return X_t, X_f
 
-## recupère données
+# recupère données
 df = ReadFiles.GetInputTrainData()
 wtPower = ReadFiles.GetOutputTrainData()
 
 testData = ReadFiles.GetInputTestData()
 
-## ajout de variables
+# ajout de variables
 addFeat = pp.AddFeatures()
 addFeat.fit(df)
 df = addFeat.transform(df)
 
 testData = addFeat.transform(testData)
 
-## séparation des individus suivant rotor_speed => non linéarité entre rotor_speed et target
+# séparation des individus suivant rotor_speed => non linéarité entre rotor_speed et target
 condi = df.Rotor_speed3>=15**3 # Rotor_speed>=15
 splitDataset = SplitEvents(condiSplit=condi)
 dfsup, dfinf = splitDataset.transform(df)
@@ -43,8 +43,8 @@ condi = testData.Rotor_speed3>=15**3 # Rotor_speed>=15
 splitTestDataset = SplitEvents(condiSplit=condi)
 testDatasup, testDatainf = splitTestDataset.transform(testData)
 
-###########
-## nettoyage des données
+##########
+# nettoyage des données
 impMedian = pp.ImputeMedian()
 impMedian.fit(dfinf)
 dfinf = impMedian.transform(dfinf)
@@ -135,14 +135,14 @@ fittedSup = pipeSup.fit(dfsup, wtPowersup)
 testDatasup_pred = pd.Series(fittedSup.predict(testDatasup), index=testDatasup.index, name='TARGET')
 
 ##############
-## prédiction finale
+# prédiction finale
 pred = pd.concat((testDatainf_pred, testDatasup_pred),axis=0).sort_index()
 
-## mae = 15 train ; 16 test
-## mape = 1.2 train ; 0.90 test
+# mae = 15 train ; 16 test
+# mape = 1.2 train ; 0.90 test
 
 ##############
-## ecriture des prédictions pour soumission
+# ecriture des prédictions pour soumission
 dirOutput = '../Data'
 outFilename = 'output_testing_model4.csv'
 pred.to_csv(os.path.join(dirOutput,outFilename), sep=';', header=True)
